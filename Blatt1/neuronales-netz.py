@@ -19,32 +19,22 @@ vocab_size = len(vocab)
 
 print(f"Anzahl der Wörter im Text: {len(words)}")
 print(f"Anzahl einzigartiger Wörter: {vocab_size}")
-print(f"Vokabular: {vocab}")
+# print(f"Vokabular: {vocab}")
 
 # Wort zu Index und Index zu Wort Mapping
 word_to_idx = {word: idx for idx, word in enumerate(vocab)}
 idx_to_word = {idx: word for idx, word in enumerate(vocab)}
 
-# Trainingsdaten erstellen: Paare von aufeinanderfolgenden Wörtern
-X_train = []
-y_train = []
+# Trainingsdaten erstellen: Paare von aufeinanderfolgenden Wörtern (nur Indizes speichern)
+training_pairs = []
 
 for i in range(len(words) - 1):
     input_word = words[i]
     output_word = words[i + 1]
-    
-    # One-Hot Encoding für Input
-    input_vec = torch.zeros(vocab_size)
-    input_vec[word_to_idx[input_word]] = 1.0
-    X_train.append(input_vec)
-    
-    # Label für Output (Index des nächsten Wortes)
-    y_train.append(word_to_idx[output_word])
+    training_pairs.append((word_to_idx[input_word], word_to_idx[output_word]))
 
-X_train = torch.stack(X_train)
-y_train = torch.tensor(y_train, dtype=torch.long)
+print(f"Anzahl Trainingspaare: {len(training_pairs)}")
 
-print(f"\nTrainingsdaten erstellt: {len(X_train)} Beispiele")
 
 # Neuronales Netz definieren
 class SimpleWordNet(nn.Module):
@@ -67,25 +57,55 @@ print(f"Output Layer: {vocab_size} Neuronen")
 print(f"\nGewichtsmatrix Form: {model.linear.weight.shape}")
 print(f"Initiale Gewichte (erste 5x5):\n{model.linear.weight.data[:5, :5]}")
 
-# Training
+# Training mit Mini-Batches
 num_epochs = 1000
-print(f"\nTraining startet für {num_epochs} Epochen...")
+batch_size = 128  # Verarbeite 128 Beispiele gleichzeitig
+num_batches = len(training_pairs) // batch_size
+print(f"\nTraining startet für {num_epochs} Epochen mit Batch-Size {batch_size}...")
+print(f"Anzahl Batches pro Epoche: {num_batches}")
 
 for epoch in range(num_epochs):
-    # Forward Pass
-    outputs = model(X_train)
-    loss = criterion(outputs, y_train)
+    epoch_loss = 0.0
     
-    # Backward Pass und Optimierung
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
+    # Trainingsdaten mischen
+    np.random.shuffle(training_pairs)
+    
+    # Mini-Batch Training
+    for batch_idx in range(num_batches):
+        # Batch erstellen
+        batch_start = batch_idx * batch_size
+        batch_end = batch_start + batch_size
+        batch = training_pairs[batch_start:batch_end]
+        
+        # One-Hot Encoding nur für aktuellen Batch
+        X_batch = torch.zeros(batch_size, vocab_size)
+        y_batch = torch.zeros(batch_size, dtype=torch.long)
+        
+        for i, (input_idx, output_idx) in enumerate(batch):
+            X_batch[i, input_idx] = 1.0
+            y_batch[i] = output_idx
+        
+        # Forward Pass
+        outputs = model(X_batch)
+        loss = criterion(outputs, y_batch)
+        
+        # Backward Pass und Optimierung
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        
+        epoch_loss += loss.item()
     
     # Ausgabe alle 100 Epochen
     if (epoch + 1) % 100 == 0:
-        print(f'Epoche [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+        avg_loss = epoch_loss / num_batches
+        print(f'Epoche [{epoch+1}/{num_epochs}], Durchschnittlicher Loss: {avg_loss:.4f}')
 
 print("\nTraining abgeschlossen!")
+
+
+
+
 
 # Test: Vorhersage des nächsten Wortes
 print("\n" + "="*50)
