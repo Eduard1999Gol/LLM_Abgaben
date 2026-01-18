@@ -1,3 +1,5 @@
 bs4
 torch
 numpy
+datasets
+transformers
