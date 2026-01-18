@@ -122,7 +122,7 @@ if __name__ == "__main__":
     criterion = nn.NLLLoss()
     
     # Adam ist meist robuster als SGD. Learning Rate 0.001 ist Standard.
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
 
     # 4. Training Loop
     EPOCHS = 10  # Wie oft gehen wir durch den ganzen Text?
@@ -163,7 +163,13 @@ if __name__ == "__main__":
     with torch.no_grad():
         output = model(context)
         pred_idx = torch.argmax(output[0]).item()
-        
-    print(f"Input Indizes: {context[0].tolist()}")
-    print(f"Vorhergesagter Index: {pred_idx}")
-    print(f"Echter Index: {target[0].item()}")
+    
+    # Konvertiere Indizes zu Wörtern
+    context_words = [full_dataset.idx_to_word[idx.item()] for idx in context[0]]
+    predicted_word = full_dataset.idx_to_word[pred_idx]
+    target_word = full_dataset.idx_to_word[target[0].item()]
+    
+    print(f"Input Wörter: {context_words}")
+    print(f"Vorhergesagtes Wort: '{predicted_word}' (Index: {pred_idx})")
+    print(f"Echtes Wort: '{target_word}' (Index: {target[0].item()})")
+    print(f"Korrekt: {'✓' if pred_idx == target[0].item() else '✗'}")
