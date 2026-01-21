@@ -1,8 +1,10 @@
 import torch
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, logging
 from datasets import load_dataset
 import numpy as np
 
+# Warnung unterdrücken (wir verwenden den Tokenizer nur zum Kodieren, nicht für Modell-Inferenz)
+logging.set_verbosity_error()
 
 # Wir nehmen den GPT2 Tokenizer
 tokenizer = AutoTokenizer.from_pretrained("gpt2")
@@ -30,17 +32,17 @@ def get_batch(data_text_list, block_size, batch_size):
     return x, y
 
 # --- TEST ---
-test_stories = [
-    "This is a story about a cat.",
-    "The dog barked loud.",
-    "Once upon a time there was a code."
-]
+test_stories = load_dataset("roneneldan/TinyStories", split="train", streaming=True)
+data_iter = test_stories.take(100)  # Nur 100 Geschichten für den Test
+
+# Extrahiere die Texte aus dem Dataset (Liste von Strings)
+story_texts = [story["text"] for story in data_iter]
 
 # Sagen wir, wir wollen Sequenzen der Länge 4 (dein Beispiel "Batch-size" von 3, hier 4)
 BLOCK_SIZE = 4 
 BATCH_SIZE = 2 # Wir wollen 2 Beispiele gleichzeitig sehen
 
-xb, yb = get_batch(test_stories, block_size=BLOCK_SIZE, batch_size=BATCH_SIZE)
+xb, yb = get_batch(story_texts, block_size=BLOCK_SIZE, batch_size=BATCH_SIZE)
 
 print(f"Shape von x: {xb.shape} (Batch Size, Block Size)")
 print("-" * 30)
