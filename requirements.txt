@@ -3,4 +3,5 @@ torch
 numpy
 datasets
 transformers
-accelerate-1.12.0
+accelerate==1.12.0
+pandas
